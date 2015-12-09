@@ -217,19 +217,19 @@ ns.internet.Ipv4GlobalRoutingHelper.PopulateRoutingTables()
 
 def SetupTcpConnection(srcNode, dstNode, dstAddr, startTime, stopTime):
   # Create a TCP sink at dstNode
-  packet_sink_helper = ns.applications.PacketSinkHelper("ns3::TcpSocketFactory", 
-                          ns.network.InetSocketAddress(ns.network.Ipv4Address.GetAny(), 
+  packet_sink_helper = ns.applications.PacketSinkHelper("ns3::TcpSocketFactory",
+                          ns.network.InetSocketAddress(ns.network.Ipv4Address.GetAny(),
                                                        8080))
   sink_apps = packet_sink_helper.Install(dstNode)
   sink_apps.Start(ns.core.Seconds(2.0))
-  sink_apps.Stop(ns.core.Seconds(50.0)) 
+  sink_apps.Stop(ns.core.Seconds(50.0))
 
-  # Create TCP connection from srcNode to dstNode 
-  on_off_tcp_helper = ns.applications.OnOffHelper("ns3::TcpSocketFactory", 
+  # Create TCP connection from srcNode to dstNode
+  on_off_tcp_helper = ns.applications.OnOffHelper("ns3::TcpSocketFactory",
                           ns.network.Address(ns.network.InetSocketAddress(dstAddr, 8080)))
   on_off_tcp_helper.SetAttribute("DataRate",
                       ns.network.DataRateValue(ns.network.DataRate(int(cmd.on_off_rate))))
-  on_off_tcp_helper.SetAttribute("PacketSize", ns.core.UintegerValue(1500)) 
+  on_off_tcp_helper.SetAttribute("PacketSize", ns.core.UintegerValue(1500))
   on_off_tcp_helper.SetAttribute("OnTime",
                       ns.core.StringValue("ns3::ConstantRandomVariable[Constant=2]"))
   on_off_tcp_helper.SetAttribute("OffTime",
@@ -240,7 +240,7 @@ def SetupTcpConnection(srcNode, dstNode, dstAddr, startTime, stopTime):
   # Install the client on node srcNode
   client_apps = on_off_tcp_helper.Install(srcNode)
   client_apps.Start(startTime)
-  client_apps.Stop(stopTime) 
+  client_apps.Stop(stopTime)
 
 
 SetupTcpConnection(nodes.Get(0), nodes.Get(2), if2if5.GetAddress(0),
@@ -298,17 +298,17 @@ classifier = flowmon_helper.GetClassifier()
 for flow_id, flow_stats in monitor.GetFlowStats():
   t = classifier.FindFlow(flow_id)
   proto = {6: 'TCP', 17: 'UDP'} [t.protocol]
-  print ("FlowID: %i (%s %s/%s --> %s/%i)" % 
+  print ("FlowID: %i (%s %s/%s --> %s/%i)" %
           (flow_id, proto, t.sourceAddress, t.sourcePort, t.destinationAddress, t.destinationPort))
-          
+
   print ("  Tx Bytes: %i" % flow_stats.txBytes)
   print ("  Rx Bytes: %i" % flow_stats.rxBytes)
   print ("  Lost Pkt: %i" % flow_stats.lostPackets)
   print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
                                        flow_stats.timeLastRxPacket.GetSeconds()))
-  print ("  Throughput: %f Mbps" % (flow_stats.rxBytes * 
-                                     8.0 / 
-                                     (flow_stats.timeLastRxPacket.GetSeconds() 
+  print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
+                                     8.0 /
+                                     (flow_stats.timeLastRxPacket.GetSeconds()
                                        - flow_stats.timeFirstTxPacket.GetSeconds())/
                                      1024/
                                      1024))

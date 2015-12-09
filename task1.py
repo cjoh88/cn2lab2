@@ -197,7 +197,7 @@ for i in range(0,10):
  for flow_id, flow_stats in monitor.GetFlowStats():
    t = classifier.FindFlow(flow_id)
    proto = {6: 'TCP', 17: 'UDP'} [t.protocol]
-   print ("FlowID: %i (%s %s/%s --> %s/%i)" % 
+   print ("FlowID: %i (%s %s/%s --> %s/%i)" %
           (flow_id, proto, t.sourceAddress, t.sourcePort,
            t.destinationAddress, t.destinationPort))
 
@@ -206,15 +206,15 @@ for i in range(0,10):
    print ("  Lost Pkt: %i" % flow_stats.lostPackets)
    print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
                                         flow_stats.timeLastRxPacket.GetSeconds()))
-   print ("  Throughput: %f Mbps" % (flow_stats.rxBytes * 
-                                     8.0 / 
-                                     (flow_stats.timeLastRxPacket.GetSeconds() 
+   print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
+                                     8.0 /
+                                     (flow_stats.timeLastRxPacket.GetSeconds()
                                       - flow_stats.timeFirstTxPacket.GetSeconds())/
                                      1024/
                                      1024))
-   plot_y[i] = (flow_stats.rxBytes * 
-                                     8.0 / 
-                                     (flow_stats.timeLastRxPacket.GetSeconds() 
+   plot_y[i] = (flow_stats.rxBytes *
+                                     8.0 /
+                                     (flow_stats.timeLastRxPacket.GetSeconds()
                                       - flow_stats.timeFirstTxPacket.GetSeconds())/
                                      1024/
                                      1024)
@@ -224,7 +224,7 @@ for i in range(0,10):
 
 plt.figure()
 #plt.xlim(0, 1)
-#plt.ylim(0, 1)
+#plt.ylim(0, 1)cd
 plt.xlabel('x')
 plt.plot(plot_x, plot_y)
 plt.title('test')
