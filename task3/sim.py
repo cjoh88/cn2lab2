@@ -35,10 +35,10 @@ nodes = ns.network.NodeContainer()
 nodes.Create(2)
 
 downloading_nodes = ns.network.NodeContainer()
-downloading_nodes.Create(cmd.downloading_clients)
+downloading_nodes.Create(int(cmd.downloading_clients))
 
 uploading_nodes = ns.network.NodeContainer()
-uploading_nodes.Create(cmd.uploading_clients)
+uploading_nodes.Create(int(cmd.uploading_clients))
 
 ################################################################################
 # CONNECT NODES WITH POINT-TO-POINT CHANNEL
@@ -51,14 +51,14 @@ nSnB.Add(nodes.Get(0))
 nSnB.Add(nodes.Get(1))
 
 nDnB = list()
-for i in range(0, cmd.downloading_clients):
+for i in range(0, int(cmd.downloading_clients)):
     link = ns.network.NodeContainer()
     link.Add(downloading_nodes.Get(i))
     link.Add(nodes.Get(1))
     nDnB.append(link)
 
 nUnB = list()
-for i in range(0, cmd.uploading_clients):
+for i in range(0, int(cmd.uploading_clients)):
     link = ns.network.NodeContainer()
     link.Add(uploading_nodes.Get(i))
     link.Add(nodes.Get(1))
@@ -172,10 +172,10 @@ def SetupTcpConnection(srcNode, dstNode, dstAddr, startTime, stopTime):
   client_apps.Start(startTime)
   client_apps.Stop(stopTime)
 
-for i in range(0, cmd.downloading_clients):
+for i in range(0, int(cmd.downloading_clients)):
     n = downloading_nodes.Get(i)
     SetupTcpConnection(nodes.Get(0), n, ifDifB[i].GetAddress(0), ns.core.Seconds(2.0), ns.core.Seconds(40.0))
-for i in range(0, cmd.uploading_clients):
+for i in range(0, int(cmd.uploading_clients)):
     n = uploading_nodes.Get(i)
     SetupTcpConnection(n, nodes.Get(0), ifSifB.GetAddress(0), ns.core.Seconds(2.0), ns.core.Seconds(40.0))
 
@@ -223,17 +223,17 @@ monitor.CheckForLostPackets()
 classifier = flowmon_helper.GetClassifier()
 
 for flow_id, flow_stats in monitor.GetFlowStats():
-  t = classifier.FindFlow(flow_id)
-  proto = {6: 'TCP', 17: 'UDP'} [t.protocol]
-  print ("FlowID: %i (%s %s/%s --> %s/%i)" %
+    t = classifier.FindFlow(flow_id)
+    proto = {6: 'TCP', 17: 'UDP'} [t.protocol]
+    print ("FlowID: %i (%s %s/%s --> %s/%i)" %
           (flow_id, proto, t.sourceAddress, t.sourcePort, t.destinationAddress, t.destinationPort))
 
-  print ("  Tx Bytes: %i" % flow_stats.txBytes)
-  print ("  Rx Bytes: %i" % flow_stats.rxBytes)
-  print ("  Lost Pkt: %i" % flow_stats.lostPackets)
-  print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
+    print ("  Tx Bytes: %i" % flow_stats.txBytes)
+    print ("  Rx Bytes: %i" % flow_stats.rxBytes)
+    print ("  Lost Pkt: %i" % flow_stats.lostPackets)
+    print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
                                        flow_stats.timeLastRxPacket.GetSeconds()))
-  print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
+    print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
                                      8.0 /
                                      (flow_stats.timeLastRxPacket.GetSeconds()
                                        - flow_stats.timeFirstTxPacket.GetSeconds())/
