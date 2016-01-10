@@ -12,9 +12,9 @@ def parse_commands():
     cmd = ns.core.CommandLine()
 
     cmd.d_min = 1
-    cmd.d_max = 5
+    cmd.d_max = 2
     cmd.u_min = 1
-    cmd.u_max = 5
+    cmd.u_max = 2
     cmd.queue_length = 5
     cmd.d_data_rate = 50000
     cmd.u_data_rate = 50000
@@ -30,6 +30,7 @@ def parse_commands():
     cmd.u_on_off = 300000
     cmd.s_on_off = 300000
     cmd.sim_run_time = 50.0
+    cmd.error_rate = 0.2
 
     cmd.Parse(sys.argv)
     return cmd
@@ -82,6 +83,12 @@ def install_network_devices(s_link, s_rate, s_latency, d_links, d_rate, d_latenc
     s_device = point_to_point.Install(s_link)
     return s_device, d_devices, u_devices
 
+def set_error_model(s_device, error_rate):
+    em = ns.network.RateErrorModel()
+    em.SetAttribute("ErrorUnit", ns.core.StringValue("ERROR_UNIT_PACKET"))
+    em.SetAttribute("ErrorRate", ns.core.DoubleValue(error_rate))
+    s_device.Get(1).SetReceiveErrorModel(em)
+
 def configure_tcp():
     ns.core.Config.SetDefault("ns3::TcpSocket::SegmentSize", ns.core.UintegerValue(1448))
     ns.core.Config.SetDefault("ns3::TcpNewReno::ReTxThreshold", ns.core.UintegerValue(4))
@@ -126,8 +133,8 @@ def setup_tcp_connection(src_node, dst_node, dst_addr, start_time, stop_time, on
         ns.core.StringValue("ns3::ConstantRandomVariable[Constant=2]"))
     on_off_tcp_helper.SetAttribute("OffTime",
         ns.core.StringValue("ns3::ConstantRandomVariable[Constant=1]"))
-    #                      ns.core.StringValue("ns3::UniformRandomVariable[Min=1,Max=2]"))
-    #                      ns.core.StringValue("ns3::ExponentialRandomVariable[Mean=2]"))
+    #    ns.core.StringValue("ns3::UniformRandomVariable[Min=1,Max=2]"))
+    #    ns.core.StringValue("ns3::ExponentialRandomVariable[Mean=2]"))
 
     client_apps = on_off_tcp_helper.Install(src_node)
     client_apps.Start(start_time)
@@ -166,11 +173,11 @@ def flowmon_analysis(monitor, flowmon_helper):
             print ("FlowID: %i (%s %s/%s --> %s/%i)" %
                     (flow_id, proto, t.sourceAddress, t.sourcePort, t.destinationAddress, t.destinationPort))
 
-            print ("  Tx Bytes: %i" % flow_stats.txBytes)
-            print ("  Rx Bytes: %i" % flow_stats.rxBytes)
-            print ("  Lost Pkt: %i" % flow_stats.lostPackets)
-            print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
-                                                flow_stats.timeLastRxPacket.GetSeconds()))
+            #print ("  Tx Bytes: %i" % flow_stats.txBytes)
+            #print ("  Rx Bytes: %i" % flow_stats.rxBytes)
+            #print ("  Lost Pkt: %i" % flow_stats.lostPackets)
+            #print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
+            #                                    flow_stats.timeLastRxPacket.GetSeconds()))
 
             #print("D: " + str(dl) + "     U: " + str(ul))
             print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
@@ -184,19 +191,18 @@ def flowmon_analysis(monitor, flowmon_helper):
         #print("timeFirstTxPacket: " + str(flow_stats.timeFirstTxPacket.GetSeconds()))
 
 def sim(downloaders, uploaders, cmd):
-    s_node, d_nodes, u_nodes = create_nodes(downloaders, uploaders) #create 10 downloaders and 10 uploaders
+    s_node, d_nodes, u_nodes = create_nodes(downloaders, uploaders)
     s_link, d_links, u_links = link_nodes(
         s_node, d_nodes, u_nodes, int(cmd.queue_length)
     )
-    #d_links = link_nodes(s_node, d_nodes, int(cmd.d_queue_length))
-    #u_links = link_nodes(s_node, u_nodes, int(cmd.u_queue_length))
     s_devices, d_devices, u_devices = install_network_devices(
         s_link, int(cmd.s_data_rate), int(cmd.s_latency),
         d_links, int(cmd.d_data_rate), int(cmd.d_latency),
         u_links, int(cmd.u_data_rate), int(cmd.u_latency)
     )
-    #d_devices = install_network_devices(d_links, int(cmd.d_data_rate), int(cmd.d_latency)) # data rate of 50000 bps and 1 ms latency
-    #u_devices = install_network_devices(u_links, int(cmd.u_data_rate), int(cmd.u_latency)) # data rate of 50000 bps and 1 ms latency
+
+    set_error_model(s_devices, float(cmd.error_rate))
+
     configure_tcp()
     stack = create_protocol_stack(s_node, d_nodes, u_nodes)
     s_ips, d_ips, u_ips = assign_ip(
@@ -205,9 +211,6 @@ def sim(downloaders, uploaders, cmd):
         u_devices, "10.2.x.0", "255.255.255.0"
     )
     ns.internet.Ipv4GlobalRoutingHelper.PopulateRoutingTables()
-    #print(str(d_ips[0].GetAddress(0)))
-    #d_ips = assign_ip(d_devices, "10.1.x.0", "255.255.255.0")
-    #u_ips = assign_ip(u_devices, "10.2.x.0", "255.255.255.0")
     setup_downloaders(s_node, d_nodes, d_ips, float(cmd.d_start_time), float(cmd.d_stop_time), int(cmd.d_on_off))    # start time 2 and stop time 40 and on off rate 300000
     setup_uploaders(s_node, u_nodes, s_ips, float(cmd.u_start_time), float(cmd.u_stop_time), int(cmd.u_on_off))    # start time 2 and stop time 40 and on off rate 300000
     monitor, helper = create_flowmon()
