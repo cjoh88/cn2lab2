@@ -22,8 +22,10 @@ cmd = ns.core.CommandLine()
 cmd.latency = 1
 cmd.rate = 500000
 cmd.on_off_rate = 300000
-cmd.downloading_clients = 5
-cmd.uploading_clients = 5
+cmd.start_d = 1
+cmd.start_u = 1
+cmd.downloading_clients = 100
+cmd.uploading_clients = 100
 cmd.AddValue ("rate", "P2P data rate in bps")
 cmd.AddValue ("latency", "P2P link Latency in miliseconds")
 cmd.AddValue ("on_off_rate", "OnOffApplication data sending rate")
@@ -34,8 +36,8 @@ cmd.Parse(sys.argv)
 
 z = [[0 for x in range(int(cmd.uploading_clients))] for x in range(int(cmd.downloading_clients))]
 
-for dl in range(1, int(cmd.downloading_clients) + 1):
-    for ul in range(1, int(cmd.uploading_clients) + 1):
+for dl in range(cmd.start_d, int(cmd.downloading_clients) + 1):
+    for ul in range(cmd.start_u, int(cmd.uploading_clients) + 1):
 
 
         #######################################################################################
@@ -244,16 +246,19 @@ for dl in range(1, int(cmd.downloading_clients) + 1):
                 # print ("  Lost Pkt: %i" % flow_stats.lostPackets)
                 # print ("  Flow active: %fs - %fs" % (flow_stats.timeFirstTxPacket.GetSeconds(),
                 #                                    flow_stats.timeLastRxPacket.GetSeconds()))
-                # print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
-                #                                  8.0 /
-                #                                  (flow_stats.timeLastRxPacket.GetSeconds()
-                #                                    - flow_stats.timeFirstTxPacket.GetSeconds())/
-                #                                  1024/
-                #                                  1024))
+
+                print("D: " + str(dl) + "     U: " + str(ul))
+                print ("  Throughput: %f Mbps" % (flow_stats.rxBytes *
+                                                 8.0 /
+                                                 (flow_stats.timeLastRxPacket.GetSeconds()
+                                                   - flow_stats.timeFirstTxPacket.GetSeconds())/
+                                                 1024/
+                                                 1024))
 
                 #index = (dl-1) + (ul-1) * int(cmd.downloading_clients)
                 #print(index)
-                z[dl-1][ul-1] = (flow_stats.rxBytes *
+                #z[dl-1][ul-1] = (flow_stats.rxBytes *
+                z[ul-1][dl-1] = (flow_stats.rxBytes *
                                                  8.0 /
                                                  (flow_stats.timeLastRxPacket.GetSeconds()
                                                    - flow_stats.timeFirstTxPacket.GetSeconds())/
@@ -264,18 +269,27 @@ for dl in range(1, int(cmd.downloading_clients) + 1):
 
 fig = plt.figure()
 ax = fig.gca(projection="3d")
-X = np.arange(0, int(cmd.downloading_clients), 1)
-#print(X)
-Y = np.arange(0, int(cmd.uploading_clients), 1)
+X = np.arange(1, int(cmd.downloading_clients) + 1, 1)
+Y = np.arange(1, int(cmd.uploading_clients) + 1, 1)
+#X = np.arange(int(cmd.start_d), int(cmd.downloading_clients) + 1, 1)
+#print(str(X))
+#Y = np.arange(int(cmd.start_u), int(cmd.uploading_clients) + 1, 1)
 X, Y = np.meshgrid(X, Y)
 #print("")
 #print(X)
 #Z = np.sin(X)
+#print("z:                    " + str(z[int(cmd.start_u):][int(cmd.start_d):]))
+#print(z[1:][1:])
+#Z = np.array(z[int(cmd.start_u):][int(cmd.start_d):])
 Z = np.array(z)
-print("Z:")
-print(Z)
-print("z:")
-print(z)
+#print("Z:")
+#print(Z)
+#print("z:")
+#print(z)
+
+ax.set_xlabel("downloading")
+ax.set_ylabel("uploading")
+ax.set_zlabel("throughput")
 
 surf = ax.plot_surface(X, Y, Z)
 plt.show()
