@@ -238,8 +238,8 @@ for dl in range(cmd.start_d, int(cmd.downloading_clients) + 1):
             if flow_id == 1:
                 t = classifier.FindFlow(flow_id)
                 proto = {6: 'TCP', 17: 'UDP'} [t.protocol]
-                # print ("FlowID: %i (%s %s/%s --> %s/%i)" %
-                #       (flow_id, proto, t.sourceAddress, t.sourcePort, t.destinationAddress, t.destinationPort))
+                print ("FlowID: %i (%s %s/%s --> %s/%i)" %
+                       (flow_id, proto, t.sourceAddress, t.sourcePort, t.destinationAddress, t.destinationPort))
                 #
                 # print ("  Tx Bytes: %i" % flow_stats.txBytes)
                 # print ("  Rx Bytes: %i" % flow_stats.rxBytes)
