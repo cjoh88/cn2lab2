@@ -8,19 +8,25 @@ import ns.network
 import ns.point_to_point
 import ns.flow_monitor
 import time
+import random
 
 def seed_rng():
-    ns.core.RngSeedManager.SetSeed(int(time.time() * 1000 % (2**31-1)))
+    #ns.core.RngSeedManager.SetSeed(int(time.time() * 1000 % (2**31-1)))
+    ns.core.RngSeedManager.SetSeed(random.randint(0, sys.maxint))
+    #print(str(int(time.time() * 1000 % (2**31-1))))
+    #print(str(random.randint(0, sys.maxint)))
+    #sys.exit()
 
 def command_line():
     cmd = ns.core.CommandLine()
 
     # Default values
     cmd.queue_length = 5
-    cmd.d_max = 5
-    cmd.u_max = 5
+    cmd.d_max = 1
+    cmd.u_max = 1
     cmd.latency = 1
     cmd.rate = 500000
+    cmd.error_rate = 0.02
 
     cmd.on_off_rate = 300000
     cmd.AddValue ("rate", "P2P data rate in bps")
@@ -69,6 +75,12 @@ def install_devices(links, data_rate, latency):
         s = k.replace("n", "d")
         devices[s] = pointToPoint.Install(v)
     return devices
+
+def set_error_model(devices, rate):
+    em = ns.network.RateErrorModel()
+    em.SetAttribute("ErrorUnit", ns.core.StringValue("ERROR_UNIT_PACKET"))
+    em.SetAttribute("ErrorRate", ns.core.DoubleValue(rate))
+    devices["d1d2"].Get(1).SetReceiveErrorModel(em)
 
 def configure_tcp():
     # Set a TCP segment size (this should be inline with the channel MTU)
@@ -209,6 +221,9 @@ def analyse(monitor, flowmon_helper):
                                          1024/
                                          1024))
 
+def analyse_downloader():
+    pass
+
 def destroy():
     ns.core.Simulator.Destroy()
 
@@ -217,6 +232,7 @@ def sim(no_of_downloaders, no_of_uploaders, cmd):
     nodes = create_nodes(no_of_downloaders, no_of_uploaders)
     links = connect_nodes(nodes, int(cmd.queue_length))
     devices = install_devices(links, int(cmd.rate), int(cmd.latency))
+    set_error_model(devices, float(cmd.error_rate))
     configure_tcp()
     create_protocol_stack(nodes)
     address = assign_ip(devices)
