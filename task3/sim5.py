@@ -23,7 +23,9 @@ def command_line():
     # Default values
     cmd.queue_length = 5
     cmd.d_max = 1
-    cmd.u_max = 1
+    cmd.u_min = 0
+    cmd.u_step = 10
+    cmd.u_max = 4000
     cmd.latency = 1
     cmd.rate = 500000
     cmd.error_rate = 0.02
@@ -198,6 +200,14 @@ def run(seconds):
     ns.core.Simulator.Stop(ns.core.Seconds(seconds))
     ns.core.Simulator.Run()
 
+def get_throughput(flow_stats):
+    return (flow_stats.rxBytes *
+                                       8.0 /
+                                       (flow_stats.timeLastRxPacket.GetSeconds()
+                                         - flow_stats.timeFirstTxPacket.GetSeconds())/
+                                       1024/
+                                       1024)
+
 def analyse(monitor, flowmon_helper):
     monitor.CheckForLostPackets()
 
@@ -221,11 +231,43 @@ def analyse(monitor, flowmon_helper):
                                          1024/
                                          1024))
 
-def analyse_downloader():
-    pass
+def analyse_downloader(monitor, flowmon_helper, address):
+    monitor.CheckForLostPackets()
+    classifier = flowmon_helper.GetClassifier()
+    data = dict()
+    ack = dict()
+
+    for flow_id, flow_stats in monitor.GetFlowStats():
+        t = classifier.FindFlow(flow_id)
+        #print(address["if2if3"].GetAddress(1))
+        downloader = get_downloader_addr(address)
+        if downloader == t.sourceAddress:   #acks
+            ack["throughput"] = get_throughput(flow_stats)
+            ack["packet_loss"] = flow_stats.lostPackets
+
+        elif get_downloader_addr(address) == t.destinationAddress:  #data
+            data["throughput"] = get_throughput(flow_stats)
+            data["packet_loss"] = flow_stats.lostPackets
+        #print(t.sourceAddress)
+    return data, ack
+
+
+def get_downloader_addr(address):
+    return address["if2if3"].GetAddress(1)
+
+def get_server_addr(address):
+    return address["if0if1"].GetAddress(0)
+
+def get_uploader_addr(address, no_of_downloaders):
+    key = "if2if" + str(3 + no_of_downloaders)
+    return address[key].GetAddress(1)
 
 def destroy():
     ns.core.Simulator.Destroy()
+
+def print_result(result):
+    print("Throughput:  %f Mbps" % result["throughput"])
+    print("Packet loss: %i" % result["packet_loss"])
 
 def sim(no_of_downloaders, no_of_uploaders, cmd):
     seed_rng()
@@ -239,11 +281,14 @@ def sim(no_of_downloaders, no_of_uploaders, cmd):
     setup_tcp(nodes, address, no_of_downloaders, no_of_uploaders, int(cmd.on_off_rate))
     monitor, flowmon_helper = create_flow_monitor()
     run(50.0)
-    analyse(monitor, flowmon_helper)
+    #analyse(monitor, flowmon_helper)
+    data, ack = analyse_downloader(monitor, flowmon_helper, address)
     destroy()
+    return data, ack
 
 def main():
     cmd = command_line()
-    sim(int(cmd.d_max), int(cmd.u_max), cmd)
+    data, ack = sim(int(cmd.d_max), int(cmd.u_max), cmd)
+    print_result(data)
 
 main()
