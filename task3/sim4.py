@@ -7,30 +7,33 @@ import ns.internet
 import ns.network
 import ns.point_to_point
 import ns.flow_monitor
+import time
 
+#TODO make sure more ip addresses can be used
+ns.core.RngSeedManager.SetSeed(int(time.time() * 1000 % (2**31-1)))
 def parse_commands():
     cmd = ns.core.CommandLine()
 
-    cmd.d_min = 1
-    cmd.d_max = 2
-    cmd.u_min = 1
-    cmd.u_max = 2
-    cmd.queue_length = 5
-    cmd.d_data_rate = 50000
-    cmd.u_data_rate = 50000
-    cmd.s_data_rate = 50000
-    cmd.d_start_time = 2.0
-    cmd.u_start_time = 2.0
-    cmd.d_stop_time = 40.0
-    cmd.u_stop_time = 40.0
-    cmd.d_latency = 1
-    cmd.u_latency = 1
-    cmd.s_latency = 1
-    cmd.d_on_off = 300000
-    cmd.u_on_off = 300000
-    cmd.s_on_off = 300000
-    cmd.sim_run_time = 50.0
-    cmd.error_rate = 0.2
+    cmd.d_min = 1               # minimum number of downloading clients
+    cmd.d_max = 5               # maximum number of downloading clients
+    cmd.u_min = 1               # minimum number of uploading clients
+    cmd.u_max = 1              # maximum number of uploading clients
+    cmd.queue_length = 5        # queue length
+    cmd.d_data_rate = 5000000     # downloaders data rate in bytes
+    cmd.u_data_rate = 5000000    # uploaders data rate in bytes
+    cmd.s_data_rate = 5000000     # servers data rate in bytes
+    cmd.d_start_time = 2.0      # downloding clients start time in seconds
+    cmd.u_start_time = 2.0      # uploading clients start time in seconds
+    cmd.d_stop_time = 40.0      # downloading clients stop time in seconds
+    cmd.u_stop_time = 40.0      # uploading clients stop time in seconds
+    cmd.d_latency = 1           # downloading clients latency in ms
+    cmd.u_latency = 1           # uploading clients latency in ms
+    cmd.s_latency = 1           # servers latency in ms
+    cmd.d_on_off = 1000       # downloading clients on off rate
+    cmd.u_on_off = 1000       # uploading clients on off rate
+    cmd.s_on_off = 1000       # servers on off rate
+    cmd.sim_run_time = 50.0     # the total time the simulation should run
+    cmd.error_rate = 0.02        # error rate of packets
 
     cmd.Parse(sys.argv)
     return cmd
@@ -81,13 +84,17 @@ def install_network_devices(s_link, s_rate, s_latency, d_links, d_rate, d_latenc
     point_to_point.SetDeviceAttribute("DataRate", ns.network.DataRateValue(ns.network.DataRate(s_rate)))
     point_to_point.SetChannelAttribute("Delay", ns.core.TimeValue(ns.core.MilliSeconds(s_latency)))
     s_device = point_to_point.Install(s_link)
+
+    #Enable Pcap here
+    point_to_point.EnablePcap("sim4", s_device.Get(0), True)
+
     return s_device, d_devices, u_devices
 
 def set_error_model(s_device, error_rate):
     em = ns.network.RateErrorModel()
     em.SetAttribute("ErrorUnit", ns.core.StringValue("ERROR_UNIT_PACKET"))
     em.SetAttribute("ErrorRate", ns.core.DoubleValue(error_rate))
-    s_device.Get(1).SetReceiveErrorModel(em)
+    s_device.Get(0).SetReceiveErrorModel(em)
 
 def configure_tcp():
     ns.core.Config.SetDefault("ns3::TcpSocket::SegmentSize", ns.core.UintegerValue(1448))
@@ -104,15 +111,25 @@ def create_protocol_stack(s_node, d_nodes, u_nodes):
 
 def assign_ip(s_devices, s_ip, s_mask, d_devices, d_ip, d_mask, u_devices, u_ip, u_mask):
     address = ns.internet.Ipv4AddressHelper()
+    #ip = s_ip.replace("x", str((i & 65280) >> 8), 1)
+    #ip = ip.replace("x", str(i & 255), 1)
     address.SetBase(ns.network.Ipv4Address(s_ip.replace("x", str(0))), ns.network.Ipv4Mask(s_mask))
+    #address.SetBase(ns.network.Ipv4Address(ip), ns.network.Ipv4Mask(s_mask))
     s_addr = address.Assign(s_devices)
     d_addr = list()
     for i, d in enumerate(d_devices):
-        address.SetBase(ns.network.Ipv4Address(d_ip.replace("x", str(i))), ns.network.Ipv4Mask(d_mask))
+        ip = d_ip.replace("x", str((i & 65280) >> 8), 1)
+        ip = ip.replace("x", str(i & 255), 1)
+        #print(ip)
+        #address.SetBase(ns.network.Ipv4Address(d_ip.replace("x", str(i))), ns.network.Ipv4Mask(d_mask))
+        address.SetBase(ns.network.Ipv4Address(ip), ns.network.Ipv4Mask(d_mask))
         d_addr.append(address.Assign(d))
     u_addr = list()
     for i, d in enumerate(u_devices):
-        address.SetBase(ns.network.Ipv4Address(u_ip.replace("x", str(i))), ns.network.Ipv4Mask(u_mask))
+        ip = u_ip.replace("x", str((i & 65280) >> 8), 1)
+        ip = ip.replace("x", str(i & 255), 1)
+        #address.SetBase(ns.network.Ipv4Address(u_ip.replace("x", str(i))), ns.network.Ipv4Mask(u_mask))
+        address.SetBase(ns.network.Ipv4Address(ip), ns.network.Ipv4Mask(u_mask))
         u_addr.append(address.Assign(d))
     return s_addr, d_addr, u_addr
 
@@ -206,9 +223,9 @@ def sim(downloaders, uploaders, cmd):
     configure_tcp()
     stack = create_protocol_stack(s_node, d_nodes, u_nodes)
     s_ips, d_ips, u_ips = assign_ip(
-        s_devices, "10.0.x.0", "255.255.255.0",
-        d_devices, "10.1.x.0", "255.255.255.0",
-        u_devices, "10.2.x.0", "255.255.255.0"
+        s_devices, "1.x.x.0", "255.255.255.0",
+        d_devices, "2.x.x.0", "255.255.255.0",
+        u_devices, "3.x.x.0", "255.255.255.0"
     )
     ns.internet.Ipv4GlobalRoutingHelper.PopulateRoutingTables()
     setup_downloaders(s_node, d_nodes, d_ips, float(cmd.d_start_time), float(cmd.d_stop_time), int(cmd.d_on_off))    # start time 2 and stop time 40 and on off rate 300000
